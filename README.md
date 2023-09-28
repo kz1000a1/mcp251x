@@ -1,12 +1,15 @@
 # mcp251x.c
 mcp251x CAN driver with hardware filtering for the Raspberry Pi 6.1.y.
-Basically, just merge craigpeacock's source to 6.1.y kErnel source
+Basically, just merge craigpeacock's source to 6.1.y kernel source.
  
 Original kernel source from:
 https://github.com/raspberrypi/linux/tree/rpi-6.1.y
 
 Based on modified source from:
 https://github.com/craigpeacock/mcp251x
+
+# Why hardware filtering
+I didn't know that SocketCAN has software filtering, and I found craigpeacock's source code...
 
 # Compiling the driver
 First download the kernel headers:
@@ -84,15 +87,35 @@ $ cat /sys/module/mcp251x/parameters/rxbn_mask
 4095,4095
 ```
 # Installation
+"make modules_install" put driver to extra directory.But, Idon't know how to fix it.
+
 To install the driver:
 ```
-sudo cp mcp251x.ko /lib/modules/$(uname -r)/kernel/drivers/net/can/spi/
+$ sudo make modules_install
+$ sudo mv /lib/modules/$(uname -r)/extra/mcp251x.ko.xz /lib/modules/$(uname -r)/kernel/drivers/net/can/spi/
 ```
 Parameters can be passed to the driver using the modprobe daemon. Create a new file /etc/modprobe.d/mcp251x.conf and add the following:
 ```
 options mcp251x rxbn_op_mode=1,1 rxbn_filters=0x7E8,0x762 rxbn_mask=0xFFF,0xFFF
 ```
+# Modify parameters
+I just add write permission to modify parameter without reload mpc251x driver.
 
+To modify parameter:
+```
+$ cat /sys/module/mcp251x/parameters/rxbn_mask
+4095,4095
+$ sudo sh -c "echo 0,0 > /sys/module/mcp251x/parameters/rxbn_mask"
+$ cat /sys/module/mcp251x/parameters/rxbn_mask
+0,0
+```
+When mcp251x driver open, these parameters set to mcp251x registers.
+So, modified parameters effect after ifdown and ifup.
+```
+$ sudo ifdown can0
+$ sudo ifup can0
+```
+example/can is sample of /etc/network/interfaces.d/can
 
 
 
